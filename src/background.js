@@ -1,29 +1,51 @@
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-var config = {
-  mode: "pac_script",
-  pacScript: {
-    data: "function FindProxyForURL(url, host) {\n" +
-      "  if (host == 'api.github.com')\n" +
-      "    return 'PROXY 127.0.0.1:3128';\n" +
-      "  return 'DIRECT';\n" +
-      "}"
+sleep(3000).then(() => {
+  var onAuthRequired = (details, asyncCallback) => {
+    console.log("onAuthChromeHandler1", details);
+    chrome.webRequest.onAuthRequired.removeListener(onAuthRequired);
+    asyncCallback({
+      authCredentials: {
+        username: "test",
+        password: "test1"
+      }
+    });
   }
-};
-chrome.proxy.settings.set(
-  { value: config, scope: 'regular' },
-  function () { }
-);
-
-
-chrome.webRequest.onAuthRequired.addListener(onAuthChromeHandler, { urls: ["<all_urls>"] }, ["asyncBlocking", "extraHeaders"]);
-function onAuthChromeHandler (details, asyncCallback) {
-  console.log("onAuthChromeHandler", details);
-  asyncCallback({
-    authCredentials: {
-      username: "chrome",
-      password: "onAuthEntered"
-    }
+  chrome.webRequest.onAuthRequired.addListener(onAuthRequired, { urls: ["https://httpbin.io/*"] }, ["asyncBlocking"]);
+  new Promise((resolve, reject) => {
+    fetch('https://httpbin.io/basic-auth/test/test', {
+      method: 'GET'
+    })
+      .then(console.log)
+      .then((json) => {
+          resolve();
+      })
+      .catch((error) => reject(error))
+      .finally(() => { chrome.webRequest.onAuthRequired.removeListener(onAuthRequired); });
   });
-}
+});
 
-
+sleep(10000).then(() => {
+  var onAuthRequired = (details, asyncCallback) => {
+    console.log("onAuthChromeHandler2", details);
+    chrome.webRequest.onAuthRequired.removeListener(onAuthRequired);
+    asyncCallback({
+      authCredentials: {
+        username: "test",
+        password: "test"
+      }
+    });
+  }
+  chrome.webRequest.onAuthRequired.addListener(onAuthRequired, { urls: ["https://httpbin.io/*"] }, ["asyncBlocking"]);
+  new Promise((resolve, reject) => {
+    fetch('https://httpbin.io/basic-auth/test/test', {
+      method: 'GET'
+    })
+      .then(console.log)
+      .then((json) => {
+          resolve();
+      })
+      .catch((error) => reject(error))
+      .finally(() => { chrome.webRequest.onAuthRequired.removeListener(onAuthRequired); });
+  });
+});
